@@ -1,0 +1,166 @@
+{
+  "data": {
+    "machines": 160,
+    "rows": 37215,
+    "train_machines": 120,
+    "test_machines": 40,
+    "positive_rate": 0.0903,
+    "horizon_cycles": 20
+  },
+  "threshold": 0.0417,
+  "cost_model": {
+    "missed_failure": 10.0,
+    "false_alarm": 1.0
+  },
+  "classifier": {
+    "roc_auc": 0.9777,
+    "pr_auc": 0.8978,
+    "precision": 0.5535,
+    "recall": 0.9429,
+    "f1": 0.6975,
+    "cost_per_cycle": 0.1191
+  },
+  "machine_level": {
+    "machines": 40,
+    "failures_flagged": 0.975,
+    "flagged_10_cycles_early": 0.975,
+    "median_lead_cycles": 36.0,
+    "false_alarm_rate_healthy": 0.0065,
+    "by_failure_mode": {
+      "bearing_wear": {
+        "machines": 13,
+        "failures_flagged": 1.0,
+        "flagged_10_cycles_early": 1.0,
+        "median_lead_cycles": 35.0
+      },
+      "electrical_fault": {
+        "machines": 3,
+        "failures_flagged": 0.6667,
+        "flagged_10_cycles_early": 0.6667,
+        "median_lead_cycles": 43.5
+      },
+      "overheating": {
+        "machines": 10,
+        "failures_flagged": 1.0,
+        "flagged_10_cycles_early": 1.0,
+        "median_lead_cycles": 39.0
+      },
+      "seal_leak": {
+        "machines": 14,
+        "failures_flagged": 1.0,
+        "flagged_10_cycles_early": 1.0,
+        "median_lead_cycles": 33.0
+      }
+    }
+  },
+  "rul": {
+    "mae": 12.0293,
+    "rmse": 18.7612,
+    "mae_final_30_cycles": 10.6304,
+    "late_share_final_30_cycles": 0.5823
+  },
+  "anomaly": {
+    "roc_auc": 0.8705
+  },
+  "cost_sweep": [
+    {
+      "miss_to_false_alarm_cost": 2,
+      "threshold": 0.1668,
+      "recall": 0.9024,
+      "precision": 0.686,
+      "flagged_10_cycles_early": 0.95,
+      "median_lead_cycles": 29.0,
+      "false_alarm_rate_healthy": 0.0011
+    },
+    {
+      "miss_to_false_alarm_cost": 5,
+      "threshold": 0.0754,
+      "recall": 0.9333,
+      "precision": 0.6135,
+      "flagged_10_cycles_early": 0.975,
+      "median_lead_cycles": 31.0,
+      "false_alarm_rate_healthy": 0.002
+    },
+    {
+      "miss_to_false_alarm_cost": 10,
+      "threshold": 0.0417,
+      "recall": 0.9429,
+      "precision": 0.5535,
+      "flagged_10_cycles_early": 0.975,
+      "median_lead_cycles": 36.0,
+      "false_alarm_rate_healthy": 0.0065
+    },
+    {
+      "miss_to_false_alarm_cost": 20,
+      "threshold": 0.0181,
+      "recall": 0.9536,
+      "precision": 0.4723,
+      "flagged_10_cycles_early": 0.975,
+      "median_lead_cycles": 41.0,
+      "false_alarm_rate_healthy": 0.0181
+    },
+    {
+      "miss_to_false_alarm_cost": 50,
+      "threshold": 0.002,
+      "recall": 0.9786,
+      "precision": 0.2878,
+      "flagged_10_cycles_early": 0.975,
+      "median_lead_cycles": 60.0,
+      "false_alarm_rate_healthy": 0.1132
+    }
+  ],
+  "baselines": {
+    "logistic_regression": {
+      "roc_auc": 0.9691,
+      "pr_auc": 0.8871
+    },
+    "never_alert_cost_per_cycle": 0.8937
+  },
+  "leakage_demo": {
+    "random_row_split_pr_auc": 0.9858,
+    "machine_split_pr_auc": 0.8978
+  },
+  "top_features": [
+    {
+      "feature": "pressure_delta",
+      "importance": 0.2444
+    },
+    {
+      "feature": "vibration_delta",
+      "importance": 0.1213
+    },
+    {
+      "feature": "cycle",
+      "importance": 0.1203
+    },
+    {
+      "feature": "temperature_delta",
+      "importance": 0.0843
+    },
+    {
+      "feature": "vibration_mean",
+      "importance": 0.0465
+    },
+    {
+      "feature": "temperature_mean",
+      "importance": 0.0097
+    },
+    {
+      "feature": "vibration_std",
+      "importance": 0.0066
+    },
+    {
+      "feature": "torque_delta",
+      "importance": 0.0063
+    },
+    {
+      "feature": "duty_mean",
+      "importance": 0.0052
+    },
+    {
+      "feature": "duty_delta",
+      "importance": 0.0051
+    }
+  ],
+  "distractor_importance_max": 0.0006
+}

@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fleet Health</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface-1: #fcfcfb; --text-primary: #0b0b0b; --text-secondary: #52514e;
+    --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --wash: rgba(42,120,214,0.08);
+    --good: #0ca30c; --warning: #fab219; --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #ffffff; --text-secondary: #c3c2b7;
+      --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5; --wash: rgba(57,135,229,0.12);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #ffffff; --text-secondary: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --wash: rgba(57,135,229,0.12);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text-primary);
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 20px 24px 8px; max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--text-secondary); }
+  main { max-width: 1200px; margin: 0 auto; padding: 8px 16px 32px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 12px 0 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .label { color: var(--text-secondary); font-size: 13px; display: flex; gap: 6px; align-items: center; }
+  .tile .value { font-size: 30px; font-weight: 650; margin-top: 2px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 600; color: var(--text-secondary); font-size: 12px;
+       padding: 10px 12px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr.selected { background: var(--wash); }
+  tbody tr:focus-visible { outline: 2px solid var(--series-1); outline-offset: -2px; }
+  .num { text-align: right; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center;
+         font-size: 11px; font-weight: 700; color: #0b0b0b; }
+  .dot.alert { background: var(--critical); color: #fff; }
+  .dot.watch { background: var(--warning); }
+  .dot.ok { background: var(--good); color: #fff; }
+  .meter { display: inline-block; width: 80px; height: 8px; border-radius: 4px; background: var(--grid);
+           vertical-align: middle; margin-right: 8px; overflow: hidden; }
+  .meter > span { display: block; height: 100%; border-radius: 4px; }
+  .drivers { color: var(--text-secondary); font-size: 13px; white-space: normal; min-width: 170px; }
+  svg.spark { display: block; overflow: visible; }
+  .spark .line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .spark .thresh { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+  .spark .base { stroke: var(--axis); stroke-width: 1; }
+  .spark .hover-dot { fill: var(--series-1); stroke: var(--surface-1); stroke-width: 2; }
+  .spark .cross { stroke: var(--axis); stroke-width: 1; }
+  .detail { padding: 16px; }
+  .detail h2 { font-size: 16px; margin: 0 0 2px; }
+  .detail .meta { color: var(--text-secondary); margin-bottom: 12px; }
+  .small-multiple { margin: 14px 0 0; }
+  .small-multiple .head { display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 13px; }
+  .small-multiple .head strong { color: var(--text-primary); font-weight: 600; }
+  .tooltip { position: fixed; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+             border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px;
+             box-shadow: 0 4px 16px rgba(0,0,0,.12); display: none; z-index: 10; }
+  .tooltip strong { font-size: 14px; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 12px; }
+  .empty { color: var(--text-secondary); padding: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Fleet Health</h1>
+  <div class="sub">Failure risk within the next <span id="horizon">20</span> cycles, estimated remaining useful life, and what is driving each alert.</div>
+</header>
+<main>
+  <section class="kpis" id="kpis" aria-label="Fleet summary"></section>
+  <div class="layout">
+    <section class="card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Machine</th><th>Status</th><th>Failure risk</th><th class="num">RUL (cycles)</th>
+              <th>Risk, last 60 cycles</th><th>Top drivers vs. baseline</th>
+            </tr>
+          </thead>
+          <tbody id="fleet"><tr><td class="empty" colspan="6">Loading fleet…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="card detail" id="detail" aria-live="polite">
+      <div class="empty">Select a machine to see its sensor trends.</div>
+    </aside>
+  </div>
+  <p class="note">Demo fleet: 24 simulated machines the model never saw during training, each observed part-way through its life.
+    σ = standard deviations from the machine's own healthy baseline. Dashed line = alert threshold.</p>
+</main>
+<div class="tooltip" id="tooltip" role="status"></div>
+
+<script>
+const STATUS = {
+  alert: { label: "Alert", icon: "!", color: "var(--critical)" },
+  watch: { label: "Watch", icon: "•", color: "var(--warning)" },
+  ok: { label: "OK", icon: "✓", color: "var(--good)" },
+};
+const SENSOR_UNITS = { vibration: "mm/s", temperature: "°C", pressure: "bar", current: "A" };
+let threshold = 0.05;
+const tooltip = document.getElementById("tooltip");
+
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "text") node.textContent = v; else if (k === "class") node.className = v; else node.setAttribute(k, v);
+  }
+  for (const c of children) node.append(c);
+  return node;
+}
+
+function svgEl(tag, attrs = {}) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  return node;
+}
+
+/** A single-series sparkline with a hover crosshair + tooltip. */
+function sparkline(values, { width = 140, height = 28, min, max, ref, label, firstCycle, format }) {
+  const pts = values.map((v, i) => [i, v]).filter(([, v]) => v !== null);
+  const lo = min ?? Math.min(...pts.map(([, v]) => v));
+  const hi = max ?? Math.max(...pts.map(([, v]) => v));
+  const span = hi - lo || 1;
+  const x = (i) => (values.length < 2 ? 0 : (i / (values.length - 1)) * width);
+  const y = (v) => height - 2 - ((v - lo) / span) * (height - 4);
+  const svg = svgEl("svg", { class: "spark", width, height, viewBox: `0 0 ${width} ${height}`, role: "img",
+                             "aria-label": `${label}: ${pts.length ? format(pts[pts.length - 1][1]) : "no data"} latest` });
+  svg.append(svgEl("line", { class: "base", x1: 0, x2: width, y1: height - 0.5, y2: height - 0.5 }));
+  if (ref !== undefined && ref >= lo && ref <= hi) {
+    svg.append(svgEl("line", { class: "thresh", x1: 0, x2: width, y1: y(ref), y2: y(ref) }));
+  }
+  svg.append(svgEl("path", { class: "line", d: pts.map(([i, v], k) => `${k ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("") }));
+  const cross = svgEl("line", { class: "cross", y1: 0, y2: height, visibility: "hidden" });
+  const dot = svgEl("circle", { class: "hover-dot", r: 4, visibility: "hidden" });
+  svg.append(cross, dot);
+  // Hit target is the whole chart box, larger than the 2px line.
+  const hit = svgEl("rect", { x: 0, y: 0, width, height, fill: "transparent" });
+  svg.append(hit);
+  hit.addEventListener("pointermove", (e) => {
+    const box = svg.getBoundingClientRect();
+    const i = Math.round(((e.clientX - box.left) / box.width) * (values.length - 1));
+    const v = values[Math.max(0, Math.min(values.length - 1, i))];
+    if (v === null || v === undefined) return;
+    cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", x(i)); dot.setAttribute("cy", y(v)); dot.setAttribute("visibility", "visible");
+    tooltip.replaceChildren(el("strong", { text: format(v) }), document.createTextNode(` ${label} · cycle ${firstCycle + i}`));
+    tooltip.style.display = "block";
+    tooltip.style.left = `${e.clientX + 12}px`;
+    tooltip.style.top = `${e.clientY + 12}px`;
+  });
+  hit.addEventListener("pointerleave", () => {
+    tooltip.style.display = "none";
+    cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden");
+  });
+  return svg;
+}
+
+function statusBadge(status) {
+  const s = STATUS[status];
+  return el("span", { class: "status" }, [el("span", { class: `dot ${status}`, "aria-hidden": "true", text: s.icon }), s.label]);
+}
+
+function meter(p, status) {
+  const wrap = el("span", {}, []);
+  const bar = el("span", { class: "meter", "aria-hidden": "true" });
+  const fill = el("span");
+  fill.style.width = `${Math.max(2, p * 100)}%`;
+  fill.style.background = STATUS[status].color;
+  bar.append(fill);
+  wrap.append(bar, `${(p * 100).toFixed(p < 0.1 || p > 0.99 ? 1 : 0)}%`);
+  return wrap;
+}
+
+function kpi(label, value, status) {
+  const head = el("div", { class: "label" }, status ? [el("span", { class: `dot ${status}`, "aria-hidden": "true", text: STATUS[status].icon }), label] : [label]);
+  return el("div", { class: "tile" }, [head, el("div", { class: "value", text: value })]);
+}
+
+function renderDetail(m) {
+  const detail = document.getElementById("detail");
+  const first = m.cycle - m.risk_trend.length + 1;
+  const children = [
+    el("h2", { text: `Machine ${m.machine_id}` }),
+    el("div", { class: "meta" }, [statusBadge(m.status), ` · cycle ${m.cycle} · ${m.load} load · RUL ≈ ${Math.round(m.rul_estimate)} cycles`]),
+  ];
+  const riskBlock = el("div", { class: "small-multiple" }, [
+    el("div", { class: "head" }, ["Failure risk", el("strong", { text: `${(m.failure_probability * 100).toFixed(1)}%` })]),
+  ]);
+  riskBlock.append(sparkline(m.risk_trend, { width: 300, height: 56, min: 0, max: 1, ref: threshold, label: "risk",
+                                             firstCycle: first, format: (v) => `${(v * 100).toFixed(1)}%` }));
+  children.push(riskBlock);
+  for (const [sensor, values] of Object.entries(m.trends)) {
+    const last = [...values].reverse().find((v) => v !== null);
+    const block = el("div", { class: "small-multiple" }, [
+      el("div", { class: "head" }, [sensor[0].toUpperCase() + sensor.slice(1),
+        el("strong", { text: last === undefined ? "–" : `${last.toFixed(sensor === "pressure" ? 2 : 1)} ${SENSOR_UNITS[sensor]}` })]),
+    ]);
+    block.append(sparkline(values, { width: 300, height: 44, label: sensor, firstCycle: m.cycle - values.length + 1,
+                                     format: (v) => `${v.toFixed(2)} ${SENSOR_UNITS[sensor]}` }));
+    children.push(block);
+  }
+  detail.replaceChildren(...children);
+}
+
+async function load() {
+  const [health, fleet] = await Promise.all([
+    fetch("/api/health").then((r) => r.json()),
+    fetch("/api/fleet").then((r) => r.json()),
+  ]);
+  threshold = health.threshold;
+  document.getElementById("horizon").textContent = health.horizon_cycles;
+  const count = (s) => fleet.filter((m) => m.status === s).length;
+  document.getElementById("kpis").replaceChildren(
+    kpi("Machines monitored", String(fleet.length)),
+    kpi("Alert — schedule maintenance", String(count("alert")), "alert"),
+    kpi("Watch", String(count("watch")), "watch"),
+    kpi("Healthy", String(count("ok")), "ok"),
+  );
+  const body = document.getElementById("fleet");
+  body.replaceChildren();
+  fleet.forEach((m, idx) => {
+    const drivers = m.drivers.slice(0, 2).map((d) => `${d.sensor} ${d.z > 0 ? "+" : ""}${d.z.toFixed(1)}σ`).join(", ");
+    const row = el("tr", { tabindex: "0" }, [
+      el("td", { text: `#${m.machine_id}` }),
+      el("td", {}, [statusBadge(m.status)]),
+      el("td", {}, [meter(m.failure_probability, m.status)]),
+      el("td", { class: "num", text: String(Math.round(m.rul_estimate)) }),
+      el("td", {}, [sparkline(m.risk_trend, { min: 0, max: 1, ref: threshold, label: "risk",
+                                             firstCycle: m.cycle - m.risk_trend.length + 1,
+                                             format: (v) => `${(v * 100).toFixed(1)}%` })]),
+      el("td", { class: "drivers", text: drivers }),
+    ]);
+    const select = () => {
+      body.querySelectorAll("tr.selected").forEach((r) => r.classList.remove("selected"));
+      row.classList.add("selected");
+      renderDetail(m);
+    };
+    row.addEventListener("click", select);
+    row.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(); } });
+    body.append(row);
+    if (idx === 0) select();
+  });
+}
+
+load().catch((err) => {
+  document.getElementById("fleet").replaceChildren(el("tr", {}, [el("td", { class: "empty", colspan: "6", text: `Could not load fleet: ${err}` })]));
+});
+</script>
+</body>
+</html>
