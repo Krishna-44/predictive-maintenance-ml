@@ -205,4 +205,4 @@ uploads `metrics.json` as an artifact.
 
 ## License
 
-[MIT](LICENSE) © Krishna Goyal
+[MIT](LICENSE) © Krishna Gupta

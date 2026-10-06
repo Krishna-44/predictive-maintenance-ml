@@ -9,7 +9,7 @@ description = "Predictive maintenance: failure-risk classification, remaining-us
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Krishna Goyal" }]
+authors = [{ name = "Krishna Gupta" }]
 keywords = ["predictive-maintenance", "machine-learning", "time-series", "anomaly-detection", "iot", "fastapi"]
 dependencies = [
   "numpy>=1.26",
